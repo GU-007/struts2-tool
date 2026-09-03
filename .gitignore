@@ -1,0 +1,36 @@
+# ===== 构建产物 =====
+target/
+*.jar
+!src/**/*.jar
+dependency-reduced-pom.xml
+.flattened-pom.xml
+
+# ===== Maven =====
+.mvn/
+*.class
+
+# ===== 本地自用文档（作者保留在本地，不上传 GitHub）=====
+docs/
+
+# ===== 检测报告输出（运行时生成）=====
+report_*.json
+report_*.html
+batch_report_*.json
+
+# ===== 临时/辅助文件 =====
+rev_listen.py
+targets.txt
+*.tmp
+
+# ===== IDE / 系统 =====
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.DS_Store
+Thumbs.db
+
+# ===== 日志 =====
+*.log
